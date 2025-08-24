@@ -1,6 +1,49 @@
+// src/components/table/EarningsTable.jsx
 import React from "react";
 import { formatCurrency } from "../../utils/formatters";
-import { convertToUSD } from "../../utils/currencyConverter";
+
+// Reusable table row
+function EarningsRow({ month, artist, usd, gbp, rowSpan }) {
+  return (
+    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+      {month && (
+        <td
+          rowSpan={rowSpan}
+          className="border px-4 py-2 font-semibold align-top"
+        >
+          {month}
+        </td>
+      )}
+      <td className="border px-4 py-2">{artist}</td>
+      <td className="border px-4 py-2">{formatCurrency(usd, "USD")}</td>
+      <td className="border px-4 py-2">{formatCurrency(gbp, "GBP")}</td>
+    </tr>
+  );
+}
+
+// Reusable subtotal row
+function SubtotalRow({ label, usd, gbp }) {
+  return (
+    <tr className="bg-gray-100 dark:bg-gray-700 font-semibold">
+      <td className="border px-4 py-2">{label}</td>
+      <td className="border px-4 py-2"></td>
+      <td className="border px-4 py-2">{formatCurrency(usd, "USD")}</td>
+      <td className="border px-4 py-2">{formatCurrency(gbp, "GBP")}</td>
+    </tr>
+  );
+}
+
+// Reusable grand total row
+function GrandTotalRow({ usd, gbp }) {
+  return (
+    <tr className="bg-blue-100 dark:bg-blue-800 text-black dark:text-white font-bold">
+      <td className="border px-4 py-2">Grand Total</td>
+      <td className="border px-4 py-2"></td>
+      <td className="border px-4 py-2">{formatCurrency(usd, "USD")}</td>
+      <td className="border px-4 py-2">{formatCurrency(gbp, "GBP")}</td>
+    </tr>
+  );
+}
 
 function EarningsTable({ rows }) {
   if (!rows || rows.length === 0) {
@@ -14,72 +57,53 @@ function EarningsTable({ rows }) {
     return acc;
   }, {});
 
-  // Sort months in descending chronological order
+  // Sort months descending
   const sortedMonths = Object.keys(grouped).sort(
     (a, b) => new Date(b) - new Date(a)
   );
 
-  // Grand totals
+  const grandTotalUSD = rows.reduce((sum, r) => sum + r.usd, 0);
   const grandTotalGBP = rows.reduce((sum, r) => sum + r.earnings, 0);
-  const grandTotalUSD = rows.reduce((sum, r) => sum + convertToUSD(r.earnings), 0);
 
   return (
-    <div className="overflow-x-auto">
-      <table className="table w-full">
-        <thead>
-          <tr className="bg-base-300">
-            <th>Month</th>
-            <th>Artist</th>
-            <th>Earnings (USD)</th>
-            <th>Earnings (GBP)</th>
+    <div className="overflow-x-auto p-4">
+      <table className="min-w-full border border-gray-300 dark:border-gray-600">
+        <thead className="bg-gray-100 dark:bg-gray-700 dark:text-gray-100">
+          <tr>
+            <th className="border px-4 py-2 text-left">Month</th>
+            <th className="border px-4 py-2 text-left">Artist</th>
+            <th className="border px-4 py-2 text-left">Earnings (USD)</th>
+            <th className="border px-4 py-2 text-left">Earnings (GBP)</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-white dark:bg-gray-800 dark:text-gray-100">
           {sortedMonths.map((month) => {
             const monthRows = grouped[month];
-            const monthlyTotalGBP = monthRows.reduce(
-              (sum, r) => sum + r.earnings,
-              0
-            );
-            const monthlyTotalUSD = monthRows.reduce(
-              (sum, r) => sum + convertToUSD(r.earnings),
-              0
-            );
+            const monthTotalUSD = monthRows.reduce((s, r) => s + r.usd, 0);
+            const monthTotalGBP = monthRows.reduce((s, r) => s + r.earnings, 0);
 
             return (
               <React.Fragment key={month}>
                 {monthRows.map((row, idx) => (
-                  <tr key={`${month}-${idx}`} className="hover">
-                    {/* Show month name only on first row */}
-                    {idx === 0 ? (
-                      <td rowSpan={monthRows.length} className="font-bold align-top">
-                        {month}
-                      </td>
-                    ) : null}
-                    <td>{row.artist}</td>
-                    <td>{formatCurrency(convertToUSD(row.earnings), "USD")}</td>
-                    <td>{formatCurrency(row.earnings)}</td>
-                  </tr>
+                  <EarningsRow
+                    key={`${month}-${idx}`}
+                    month={idx === 0 ? month : null}
+                    artist={row.artist}
+                    usd={row.usd}
+                    gbp={row.earnings}
+                    rowSpan={idx === 0 ? monthRows.length : undefined}
+                  />
                 ))}
-
-                {/* Monthly subtotal row */}
-                <tr className="bg-base-200 font-bold">
-                  <td>Total {month}</td>
-                  <td></td>
-                  <td>{formatCurrency(monthlyTotalUSD, "USD")}</td>
-                  <td>{formatCurrency(monthlyTotalGBP)}</td>
-                </tr>
+                <SubtotalRow
+                  label={`Total ${month}`}
+                  usd={monthTotalUSD}
+                  gbp={monthTotalGBP}
+                />
               </React.Fragment>
             );
           })}
 
-          {/* Grand total row */}
-          <tr className="bg-primary text-primary-content font-bold">
-            <td>Grand Total</td>
-            <td></td>
-            <td>{formatCurrency(grandTotalUSD, "USD")}</td>
-            <td>{formatCurrency(grandTotalGBP)}</td>
-          </tr>
+          <GrandTotalRow usd={grandTotalUSD} gbp={grandTotalGBP} />
         </tbody>
       </table>
     </div>

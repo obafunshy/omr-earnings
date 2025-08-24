@@ -26,3 +26,39 @@ export function formatMonth(dateStr) {
     return dateStr;
   }
 }
+
+export function formatDateRelative(dateStr) {
+  if (!dateStr || dateStr === "Unknown") return "Unknown";
+
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+
+    // Human-friendly format
+    const formatted = date.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+
+    // Relative "x days/months ago"
+    const now = new Date();
+    const diffMs = now - date;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    let relative = "";
+
+    if (diffDays < 30) {
+      relative = `${diffDays} day${diffDays !== 1 ? "s" : ""} ago`;
+    } else if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      relative = `${months} month${months !== 1 ? "s" : ""} ago`;
+    } else {
+      const years = Math.floor(diffDays / 365);
+      relative = `${years} year${years !== 1 ? "s" : ""} ago`;
+    }
+
+    return `${formatted} (${relative})`;
+  } catch {
+    return dateStr;
+  }
+}

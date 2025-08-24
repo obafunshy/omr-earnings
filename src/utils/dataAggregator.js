@@ -1,138 +1,143 @@
-// utils/dataAggregator.js
 export default class DataAggregator {
   constructor(rows) {
-    this.rows = rows;
+    this.rows = Array.isArray(rows) ? rows : [];
   }
 
-normalizeArtist(name) {
-  if (!name || typeof name !== "string") return "Unknown";
-
-  // Handle collabs like "Artist x Someone" or "Artist X Someone"
-  const parts = name.split(/ x | X /i);
-  let main = parts[0].trim();
-
-  // Clean "ft." or "feat." just in case
-  main = main.replace(/\s+ft\.?.*/i, "").replace(/\s+feat\.?.*/i, "");
-
-  if (!main) return "Unknown";
-
-  return this.capitalize(main.toLowerCase());
-}
-
-  // Normalize song titles
+  // --- Normalizers (generic, reusable) ---
+  normalizeArtist(name) {
+    if (!name || typeof name !== "string") return "Unknown";
+    let main = name.replace(/\s+ft\.?.*/i, "").replace(/\s+feat\.?.*/i, "");
+    main = main.split(/ x | X /i)[0].trim();
+    if (!main) return "Unknown";
+    return this.capitalize(main.toLowerCase());
+  }
   normalizeSong(title) {
-    if (!title) return "Unknown";
-
-    let normalized = title.trim();
-
-    // Remove "ft." or "feat." from song titles
-    normalized = normalized.replace(/\s+ft\.?.*/i, "").replace(/\s+feat\.?.*/i, "");
-
-    // Handle "x" collaborations in titles
-    const parts = normalized.split(/ x | X /i);
-    normalized = parts[0].trim();
-
-    return this.capitalize(normalized.toLowerCase());
+    if (!title || typeof title !== "string") return "Unknown";
+    let t = title.replace(/\s+ft\.?.*/i, "").replace(/\s+feat\.?.*/i, "");
+    t = t.split(/ x | X /i)[0].trim();
+    return this.capitalize(t.toLowerCase());
   }
+  capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-  // Capitalize helper (only first letter uppercase)
-  capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  // Group by artist & month
-  getArtistMonthlyEarnings() {
+  getArtistWithSongs() {
     const grouped = {};
 
-    this.rows.forEach((row) => {
-      const artist = this.normalizeArtist(row.artist);
-      const month = row.month;
-      const earnings = row.earnings;
-
-      if (!grouped[month]) grouped[month] = {};
-      if (!grouped[month][artist]) grouped[month][artist] = 0;
-
-      grouped[month][artist] += earnings;
-    });
-
-    // Flatten to array
-    const flattened = [];
-    Object.keys(grouped).forEach((month) => {
-      Object.keys(grouped[month]).forEach((artist) => {
-        flattened.push({
-          month,
-          artist,
-          earnings: grouped[month][artist],
-        });
-      });
-    });
-
-    return flattened;
-  }
-
-  // Group by song & month
-  getSongMonthlyEarnings() {
-    const grouped = {};
-
-    this.rows.forEach((row) => {
-      const song = this.normalizeSong(row.song);
-      const month = row.month;
-      const earnings = row.earnings;
-
-      if (!grouped[month]) grouped[month] = {};
-      if (!grouped[month][song]) grouped[month][song] = 0;
-
-      grouped[month][song] += earnings;
-    });
-
-    // Flatten
-    const flattened = [];
-    Object.keys(grouped).forEach((month) => {
-      Object.keys(grouped[month]).forEach((song) => {
-        flattened.push({
-          month,
-          song,
-          earnings: grouped[month][song],
-        });
-      });
-    });
-
-    return flattened;
-  }
-
-  getSummary() {
-    if (!this.rows || this.rows.length === 0) {
-        return {
-        totalEarnings: 0,
-        artistCount: 0,
-        songCount: 0,
-        topArtist: null,
-        topSong: null,
-        };
-    }
-
-    const totalEarnings = this.rows.reduce((sum, r) => sum + r.earnings, 0);
-    const artistMap = {};
-    const songMap = {};
-
-    this.rows.forEach(r => {
+    for (const r of this.rows) {
         const artist = this.normalizeArtist(r.artist);
         const song = this.normalizeSong(r.song);
 
-        artistMap[artist] = (artistMap[artist] || 0) + r.earnings;
-        songMap[song] = (songMap[song] || 0) + r.earnings;
-    });
+        if (!grouped[artist]) grouped[artist] = {};
+        if (!grouped[artist][song]) {
+        grouped[artist][song] = { usd: 0, gbp: 0 };
+        }
 
-    const topArtist = Object.entries(artistMap).sort((a, b) => b[1] - a[1])[0];
-    const topSong = Object.entries(songMap).sort((a, b) => b[1] - a[1])[0];
-
-    return {
-        totalEarnings,
-        artistCount: Object.keys(artistMap).length,
-        songCount: Object.keys(songMap).length,
-        topArtist: topArtist ? { name: topArtist[0], earnings: topArtist[1] } : null,
-        topSong: topSong ? { name: topSong[0], earnings: topSong[1] } : null,
-    };
+        grouped[artist][song].usd += Number(r.usd || 0);
+        grouped[artist][song].gbp += Number(r.earnings || 0);
     }
 
+    return grouped;
+    }
+
+  // --- Artist+Month aggregation (sums both USD & GBP) ---
+  getArtistMonthlyEarnings() {
+    const map = {};
+    for (const r of this.rows) {
+      const month = r.month || "Unknown";
+      const artist = this.normalizeArtist(r.artist);
+      const usd = Number(r.usd || 0);
+      const gbp = Number(r.earnings || 0);
+
+      const key = `${month}__${artist}`;
+      if (!map[key]) map[key] = { month, artist, usd: 0, earnings: 0 };
+      map[key].usd += usd;
+      map[key].earnings += gbp;
+    }
+    return Object.values(map);
+  }
+
+  // --- Optional summary (safe defaults) ---
+  getSummary() {
+    if (!this.rows.length) {
+      return { totalEarnings: 0, artistCount: 0, songCount: 0, topArtist: null, topSong: null };
+    }
+    const artistMap = {};
+    const songMap = {};
+    let total = 0;
+    for (const r of this.rows) {
+      const artist = this.normalizeArtist(r.artist);
+      const song = this.normalizeSong(r.song);
+      const gbp = Number(r.earnings || 0);
+      total += gbp;
+      artistMap[artist] = (artistMap[artist] || 0) + gbp;
+      songMap[song] = (songMap[song] || 0) + gbp;
+    }
+    const top = (m) => {
+      const e = Object.entries(m).sort((a, b) => b[1] - a[1])[0];
+      return e ? { name: e[0], earnings: e[1] } : null;
+    };
+    return {
+      totalEarnings: total,
+      artistCount: Object.keys(artistMap).length,
+      songCount: Object.keys(songMap).length,
+      topArtist: top(artistMap),
+      topSong: top(songMap)
+    };
+  }
+
+  getSongEarnings() {
+    const grouped = {};
+
+    this.rows.forEach(r => {
+      const key = `${r.artist}-${r.song}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          title: r.song,
+          artist: r.artist,
+          releaseDate: r.releaseDate || "Unknown", // ✅ add release date
+          monthly: {},
+          yearly: {},
+          totalUsd: 0,
+          totalGbp: 0
+        };
+      }
+
+      // monthly
+      grouped[key].monthly[r.month] = (grouped[key].monthly[r.month] || 0) + r.usd;
+
+      // yearly (extract last word e.g. "June 2025" → "2025")
+      const year = r.month.split(" ").pop();
+      grouped[key].yearly[year] = (grouped[key].yearly[year] || 0) + r.usd;
+
+      // totals
+      grouped[key].totalUsd += r.usd;
+      grouped[key].totalGbp += r.earnings;
+    });
+
+    return Object.values(grouped);
+  }
+
+    getArtistTotals() {
+    const grouped = {};
+
+    this.rows.forEach(r => {
+        if (!grouped[r.artist]) {
+        grouped[r.artist] = {
+            artist: r.artist,
+            songs: new Set(),
+            totalUsd: 0,
+            totalGbp: 0,
+        };
+        }
+        grouped[r.artist].songs.add(r.song);
+        grouped[r.artist].totalUsd += r.usd;
+        grouped[r.artist].totalGbp += r.earnings;
+    });
+
+    // convert songs Set to count
+    return Object.values(grouped).map(a => ({
+        ...a,
+        songs: a.songs.size
+    }));
+    }
 }
+
