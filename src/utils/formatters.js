@@ -62,3 +62,8 @@ export function formatDateRelative(dateStr) {
     return dateStr;
   }
 }
+
+export function parseCurrency(value) {
+  if (!value) return 0;
+  return parseFloat(String(value).replace(/[^0-9.-]+/g, "")) || 0;
+}

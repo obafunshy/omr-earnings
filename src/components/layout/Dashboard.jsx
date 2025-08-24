@@ -6,6 +6,7 @@ import Pagination from "../shared/Pagination";
 import SongEarningsView from "../table/SongEarningsView";
 import ArtistTotalsView from "../table/ArtistTotalsView";
 import DataAggregator from "../../utils/dataAggregator";
+import DspEarningsView from "../table/DspEarningsView";
 import { keepLastNMonths, paginate } from "../../utils/dataHelpers";
 
 function Dashboard({ data }) {
@@ -48,6 +49,7 @@ function Dashboard({ data }) {
           <option value="artist">Artist View</option>
           <option value="song">Song View</option>
           <option value="artistTotals">Artist Totals View</option>
+          <option value="dsp">DSP View</option> 
         </select>
       </div>
 
@@ -68,6 +70,9 @@ function Dashboard({ data }) {
       {view === "artistTotals" && (
         <ArtistTotalsView rows={data} />
       )}
+      {view === "dsp" && (
+        <DspEarningsView rows={aggregator.getDspEarnings()} />
+        )}
 
       {paginated.totalPages > 1 && (
         <Pagination page={paginated.page} totalPages={paginated.totalPages} onPageChange={setPage} />

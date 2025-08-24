@@ -65,7 +65,7 @@ function SongCard({ song }) {
 
           {/* Song totals */}
           <tr className="bg-gray-100 dark:bg-gray-700 font-bold">
-            <td className="border px-4 py-2">Total</td>
+            <td className="border px-4 py-2">Totally</td>
             <td className="border px-4 py-2 text-right">
               {formatCurrency(song.totalUsd, "USD")}
             </td>

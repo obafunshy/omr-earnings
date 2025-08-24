@@ -117,27 +117,53 @@ export default class DataAggregator {
   }
 
     getArtistTotals() {
-    const grouped = {};
+        const grouped = {};
 
-    this.rows.forEach(r => {
-        if (!grouped[r.artist]) {
-        grouped[r.artist] = {
-            artist: r.artist,
-            songs: new Set(),
-            totalUsd: 0,
-            totalGbp: 0,
-        };
-        }
-        grouped[r.artist].songs.add(r.song);
-        grouped[r.artist].totalUsd += r.usd;
-        grouped[r.artist].totalGbp += r.earnings;
-    });
+        this.rows.forEach(r => {
+            if (!grouped[r.artist]) {
+            grouped[r.artist] = {
+                artist: r.artist,
+                songs: new Set(),
+                totalUsd: 0,
+                totalGbp: 0,
+            };
+            }
+            grouped[r.artist].songs.add(r.song);
+            grouped[r.artist].totalUsd += r.usd;
+            grouped[r.artist].totalGbp += r.earnings;
+        });
 
-    // convert songs Set to count
-    return Object.values(grouped).map(a => ({
-        ...a,
-        songs: a.songs.size
-    }));
+        // convert songs Set to count
+        return Object.values(grouped).map(a => ({
+            ...a,
+            songs: a.songs.size
+        }));
     }
+
+    // in src/utils/dataAggregator.js
+    getDspEarnings() {
+    const map = {};
+
+    for (const r of this.rows) {
+      const month = r.month || "Unknown";
+      const artist = this.normalizeArtist(r.artist);
+      const dsp = r.dsp || r["Store"] || "Unknown DSP";
+      const usd = Number(r.usd || 0);
+      const gbp = Number(r.earnings || 0);
+
+      // ✅ Skip zero-earning rows
+      if (usd <= 0 && gbp <= 0) continue;
+
+      const key = `${month}__${artist}__${dsp}`;
+      if (!map[key]) {
+        map[key] = { month, artist, dsp, usd: 0, gbp: 0 };
+      }
+      map[key].usd += usd;
+      map[key].gbp += gbp;
+    }
+
+    // ✅ Drop any entries that still ended at 0
+    return Object.values(map).filter(r => r.usd > 0 || r.gbp > 0);
+  }
 }
 
