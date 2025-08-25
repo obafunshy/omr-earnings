@@ -29,10 +29,9 @@ function SongCard({ song }) {
 
   return (
     <div className="p-4 bg-gray-800 rounded-lg shadow">
-      <h2 className="text-lg font-semibold">{song.title}</h2>
-      <p className="text-gray-400">{song.artist}</p>
+      <h2 className="text-lg font-semibold">{song.title} - <span className="text-gray-400">{song.artist}</span></h2>
       <p className="text-sm text-gray-500">
-        Released: {song.releaseDate || "Unknown"}
+        {/* Released: {song.releaseDate || "Unknown"} */}
       </p>
 
       <h3 className="mt-4 font-semibold">Monthly Earnings</h3>

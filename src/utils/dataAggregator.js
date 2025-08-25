@@ -165,5 +165,24 @@ export default class DataAggregator {
     // ✅ Drop any entries that still ended at 0
     return Object.values(map).filter(r => r.usd > 0 || r.gbp > 0);
   }
+
+  getDspTotals() {
+    const grouped = {};
+
+    this.rows.forEach((r) => {
+      const month = r.month || "Unknown";
+      const dsp = r.dsp || "Unknown DSP";
+
+      const key = `${month}__${dsp}`;
+      if (!grouped[key]) {
+        grouped[key] = { month, dsp, usd: 0, earnings: 0 };
+      }
+
+      grouped[key].usd += Number(r.usd || 0);
+      grouped[key].earnings += Number(r.earnings || 0);
+    });
+
+    return Object.values(grouped);
+  }
 }
 

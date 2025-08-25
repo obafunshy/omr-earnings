@@ -7,6 +7,7 @@ import SongEarningsView from "../table/SongEarningsView";
 import ArtistTotalsView from "../table/ArtistTotalsView";
 import DataAggregator from "../../utils/dataAggregator";
 import DspEarningsView from "../table/DspEarningsView";
+import DspTotalsView from "../table/DspTotalsView";
 import { keepLastNMonths, paginate } from "../../utils/dataHelpers";
 
 function Dashboard({ data }) {
@@ -50,6 +51,7 @@ function Dashboard({ data }) {
           <option value="song">Song View</option>
           <option value="artistTotals">Artist Totals View</option>
           <option value="dsp">DSP View</option> 
+          <option value="dspTotals">DSP Totals View</option>
         </select>
       </div>
 
@@ -73,6 +75,9 @@ function Dashboard({ data }) {
       {view === "dsp" && (
         <DspEarningsView rows={aggregator.getDspEarnings()} />
         )}
+      {view === "dspTotals" && (
+        <DspTotalsView rows={aggregator.getDspTotals()} />
+      )}
 
       {paginated.totalPages > 1 && (
         <Pagination page={paginated.page} totalPages={paginated.totalPages} onPageChange={setPage} />
